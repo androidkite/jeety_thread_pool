@@ -28,20 +28,10 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.eclipse.jetty.util.BlockingArrayQueue;
-import org.eclipse.jetty.util.ConcurrentHashSet;
-import org.eclipse.jetty.util.component.AbstractLifeCycle;
-import org.eclipse.jetty.util.component.ContainerLifeCycle;
-import org.eclipse.jetty.util.component.Dumpable;
-import org.eclipse.jetty.util.component.LifeCycle;
-import org.eclipse.jetty.util.log.Log;
-import org.eclipse.jetty.util.log.Logger;
 import org.eclipse.jetty.util.thread.ThreadPool.SizedThreadPool;
 
 public class QueuedThreadPool extends AbstractLifeCycle implements SizedThreadPool, Dumpable
 {
-    private static final Logger LOG = Log.getLogger(QueuedThreadPool.class);
 
     private final AtomicInteger _threadsStarted = new AtomicInteger();
     private final AtomicInteger _threadsIdle = new AtomicInteger();
@@ -155,23 +145,23 @@ public class QueuedThreadPool extends AbstractLifeCycle implements SizedThreadPo
         {
             Thread.yield();
             
-            if (LOG.isDebugEnabled())
-            {
-                for (Thread unstopped : _threads)
-                {
-                    StringBuilder dmp = new StringBuilder();
-                    for (StackTraceElement element : unstopped.getStackTrace())
-                    {
-                        dmp.append(System.lineSeparator()).append("\tat ").append(element);
-                    }
-                    LOG.warn("Couldn't stop {}{}", unstopped, dmp.toString());
-                }
-            }
-            else
-            {
-                for (Thread unstopped : _threads)
-                    LOG.warn("{} Couldn't stop {}",this,unstopped);
-            }
+//            if (LOG.isDebugEnabled())
+//            {
+//                for (Thread unstopped : _threads)
+//                {
+//                    StringBuilder dmp = new StringBuilder();
+//                    for (StackTraceElement element : unstopped.getStackTrace())
+//                    {
+//                        dmp.append(System.lineSeparator()).append("\tat ").append(element);
+//                    }
+//                    LOG.warn("Couldn't stop {}{}", unstopped, dmp.toString());
+//                }
+//            }
+//            else
+//            {
+//                for (Thread unstopped : _threads)
+//                    LOG.warn("{} Couldn't stop {}",this,unstopped);
+//            }
         }
 
         synchronized (_joinLock)
@@ -346,7 +336,6 @@ public class QueuedThreadPool extends AbstractLifeCycle implements SizedThreadPo
     {
         if (!isRunning() || !_jobs.offer(job))
         {
-            LOG.warn("{} rejected {}", this, job);
             throw new RejectedExecutionException(job.toString());
         }
         else
@@ -586,18 +575,14 @@ public class QueuedThreadPool extends AbstractLifeCycle implements SizedThreadPo
             catch (InterruptedException e)
             {
                 ignore=true;
-                LOG.ignore(e);
             }
             catch (Throwable e)
             {
-                LOG.warn(e);
             }
             finally
             {
                 if (!shrink && isRunning())
                 {
-                    if (!ignore)
-                        LOG.warn("Unexpected thread death: {} in {}",this,QueuedThreadPool.this);
                     // This is an unexpected thread death!
                     if (_threadsStarted.decrementAndGet()<getMaxThreads())
                         startThreads(1);
